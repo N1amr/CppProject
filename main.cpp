@@ -75,38 +75,47 @@ bool solve(Grid g, int turn, int lvl, int m) {
 
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
-      char c = g[i][j];
-      if (turn == 0 && islower(c) || turn == 1 && isupper(c) || c == EMPTY)
+      char piece = g[i][j];
+      if (turn == 0 && islower(piece) || turn == 1 && isupper(piece) || piece == EMPTY)
         continue;
 
-      char type = (char) tolower(c);
+      char type = (char) tolower(piece);
       auto mvs = moves[type];
-      for (auto p = mvs.begin(); p != mvs.end(); p++) {
+      for (auto direction = mvs.begin(); direction != mvs.end(); direction++) {
         int i2 = i, j2 = j;
 
         if (type != 'n') {
-          bool cont = 1;
-          while (cont) {
-            i2 += p->first, j2 += p->second;
-            if (BLOCKED(c, i2, j2)) break;
-            if (ATTACKABLE(c, i2, j2)) {
-              if (WHITE_WINS(turn, i2, j2))
-                return true;
-              else if (WHITE_LOSES(turn, i2, j2))
-                return false;
-
-              cont = 0;
+          while (true) {
+            i2 += direction->first, j2 += direction->second;
+            if (!BLOCKED(piece, i2, j2)) {
+              if (ATTACKABLE(piece, i2, j2)) {
+                if (WHITE_WINS(turn, i2, j2)) {
+                  print(nextGrid(g, i, j, i2, j2), lvl + 1);
+                  return true;
+                } else if (WHITE_LOSES(turn, i2, j2)) {
+                  print(nextGrid(g, i, j, i2, j2), lvl + 1);
+                  return false;
+                }
+                possible.push({{i,  j},
+                               {i2, j2}});
+                break;
+              }
+              possible.push({{i,  j},
+                             {i2, j2}});
+            } else {
+              break;
             }
-            possible.push({{i,  j},
-                           {i2, j2}});
           }
         } else {
-          i2 = i + p->first, j2 = j + p->second;
-          if (!BLOCKED(c, i2, j2)) {
-            if (WHITE_WINS(turn, i2, j2))
+          i2 = i + direction->first, j2 = j + direction->second;
+          if (!BLOCKED(piece, i2, j2)) {
+            if (WHITE_WINS(turn, i2, j2)) {
+              print(nextGrid(g, i, j, i2, j2), lvl + 1);
               return true;
-            else if (WHITE_LOSES(turn, i2, j2))
+            } else if (WHITE_LOSES(turn, i2, j2)) {
+              print(nextGrid(g, i, j, i2, j2), lvl + 1);
               return false;
+            }
             possible.push({{i,  j},
                            {i2, j2}});
           }
@@ -114,6 +123,7 @@ bool solve(Grid g, int turn, int lvl, int m) {
       }
     }
   }
+
   while (possible.size() > 0) {
     auto p = possible.front();
     possible.pop();
@@ -122,13 +132,21 @@ bool solve(Grid g, int turn, int lvl, int m) {
         j = p.first.second,
         i2 = p.second.first,
         j2 = p.second.second;
-    if (!solve(nextGrid(g, i, j, i2, j2), !turn, lvl + 1, m))
-      return false;
 
-    print(nextGrid(g, i, j, i2, j2), lvl);
+    if (turn == 0) {
+      if (solve(nextGrid(g, i, j, i2, j2), !turn, lvl + 1, m)) {
+        print(nextGrid(g, i, j, i2, j2), lvl);
+        return true;
+      }
+    } else if (turn == 1) {
+      if (!solve(nextGrid(g, i, j, i2, j2), !turn, lvl + 1, m)) {
+        print(nextGrid(g, i, j, i2, j2), lvl);
+        return false;
+      }
+    }
   }
 
-  return ans;
+  return false;
 }
 
 void init() {
