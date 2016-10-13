@@ -71,7 +71,7 @@ bool solve(Grid g, int turn, int lvl, int m) {
     return false;
 
   bool ans = 1;
-  vector<pair<pair<int, int>, pair<int, int>>> possible;
+  queue<pair<pair<int, int>, pair<int, int>>> possible;
 
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
@@ -79,7 +79,7 @@ bool solve(Grid g, int turn, int lvl, int m) {
       if (turn == 0 && islower(c) || turn == 1 && isupper(c) || c == EMPTY)
         continue;
 
-      char type = tolower(c);
+      char type = (char) tolower(c);
       auto mvs = moves[type];
       for (auto p = mvs.begin(); p != mvs.end(); p++) {
         int i2 = i, j2 = j;
@@ -97,8 +97,8 @@ bool solve(Grid g, int turn, int lvl, int m) {
 
               cont = 0;
             }
-            possible.push_back({{i,  j},
-                                {i2, j2}});
+            possible.push({{i,  j},
+                           {i2, j2}});
           }
         } else {
           i2 = i + p->first, j2 = j + p->second;
@@ -107,16 +107,16 @@ bool solve(Grid g, int turn, int lvl, int m) {
               return true;
             else if (WHITE_LOSES(turn, i2, j2))
               return false;
-            possible.push_back({{i,  j},
-                                {i2, j2}});
+            possible.push({{i,  j},
+                           {i2, j2}});
           }
         }
       }
     }
   }
   while (possible.size() > 0) {
-    auto p = possible.back();
-    possible.pop_back();
+    auto p = possible.front();
+    possible.pop();
 
     int i = p.first.first,
         j = p.first.second,
@@ -124,6 +124,8 @@ bool solve(Grid g, int turn, int lvl, int m) {
         j2 = p.second.second;
     if (!solve(nextGrid(g, i, j, i2, j2), !turn, lvl + 1, m))
       return false;
+
+    print(nextGrid(g, i, j, i2, j2), lvl);
   }
 
   return ans;
@@ -138,7 +140,6 @@ void init() {
   moves['q'].push_back({1, -1});
   moves['q'].push_back({-1, 1});
   moves['q'].push_back({-1, -1});
-
 
   moves['r'].push_back({1, 0});
   moves['r'].push_back({-1, 0});
@@ -159,8 +160,8 @@ void init() {
 int main() {
   init();
 //  ios::sync_with_stdio(false);
-#ifdef N1AMR
-  freopen("in", "r", stdin);
+#ifdef N1AMR_FILE
+  freopen("input", "r", stdin);
 #endif
   string line;
   int tc;
@@ -177,18 +178,18 @@ int main() {
     getline(cin, line);
     sscanf(line.c_str(), "%d %d %d\n", &w, &b, &m);
     Grid board(4, string(4, EMPTY));
-//#ifdef N1AMR
-//    for (int i = 0; i < 4; ++i)
-//      for (int j = 0; j < 4; ++j)
-//        scanf("%d", &board[i][j]);
-//
-//#else
+#ifdef N1AMR
+    for (int i = 0; i < 4; ++i) {
+      getline(cin, line);
+      sscanf(line.c_str(), "%c%c%c%c", &board[i][0], &board[i][1], &board[i][2], &board[i][3]);
+    }
+#else
     for (int i = 0; i < w + b; ++i) {
       getline(cin, line);
       sscanf(line.c_str(), "%c %c %d", &t, &r, &c);
       board[4 - c][r - 'A'] = t + (i >= w) * ('a' - 'A');
     }
-//#endif
+#endif
     print(board, 0);
     printf("%s\n", (solve(board, 0, 0, m) ? "YES" : "NO"));
   }
