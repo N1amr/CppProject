@@ -2,18 +2,68 @@
 
 using namespace std;
 
-#define EMPTY ('.')
 #define Grid vector<string>
+#define Long unsigned long long
+
+#define EMPTY ('.')
+#define WHITE_TURN 0
+#define BLACK_TURN 1
+
 #define INVALID(i, j) (i < 0 || j < 0 || i > 3 || j > 3)
 #define GET(i, j) (g[i][j])
-#define BLOCKED(c, i2, j2) (INVALID(i2, j2) || islower(c) && islower(GET(i2, j2))  || isupper(c) && isupper(GET(i2, j2)))
-#define ATTACKABLE(c, i2, j2) (!BLOCKED(c, i2, j2) && GET(i2, j2) != EMPTY)
-#define WHITE_WINS(turn, i2, j2) (!INVALID(i2, j2) && turn == 0 && GET(i2, j2) == 'q')
-#define WHITE_LOSES(turn, i2, j2) (!INVALID(i2, j2) && turn == 1 && GET(i2, j2) == 'Q')
-#define Long unsigned long long
+
+#define IS_EMPTY(i, j) (!INVALID(i, j) && GET(i, j) == EMPTY)
+#define IS_WHITE(i, j) (!INVALID(i, j) && GET(i, j) != EMPTY && isupper(GET(i, j)))
+#define IS_BLACK(i, j) (!INVALID(i, j) && GET(i, j) != EMPTY && islower(GET(i, j)))
+
+#define IS_ENEMY(turn, i2, j2) (!INVALID(i2, j2) && (turn == BLACK_TURN && IS_WHITE(i2, j2) || turn == WHITE_TURN && IS_BLACK(i2, j2)))
+#define WHITE_WINS(turn, i2, j2) (!INVALID(i2, j2) && turn == WHITE_TURN && GET(i2, j2) == 'q')
+#define WHITE_LOSES(turn, i2, j2) (!INVALID(i2, j2) && turn == BLACK_TURN && GET(i2, j2) == 'Q')
 
 set<Long> history;
 map<char, vector<pair<int, int>>> moves;
+
+void init() {
+  moves['q'].push_back({1, 0});
+  moves['q'].push_back({-1, 0});
+  moves['q'].push_back({0, 1});
+  moves['q'].push_back({0, -1});
+  moves['q'].push_back({1, 1});
+  moves['q'].push_back({1, -1});
+  moves['q'].push_back({-1, 1});
+  moves['q'].push_back({-1, -1});
+
+  moves['r'].push_back({1, 0});
+  moves['r'].push_back({-1, 0});
+  moves['r'].push_back({0, 1});
+  moves['r'].push_back({0, -1});
+
+  moves['b'].push_back({1, 1});
+  moves['b'].push_back({1, -1});
+  moves['b'].push_back({-1, 1});
+  moves['b'].push_back({-1, -1});
+
+  for (int i = -2; i <= 2; ++i)
+    for (int j = -2; j <= 2; ++j)
+      if (i != 0 && j != 0 && i != j && i != -j)
+        moves['n'].push_back({i, j});
+}
+
+void print(Grid g, int lvl = 0) {
+#ifdef N1AMR
+  char c;
+  string indent(lvl * 5, ' ');
+  for (int i = 0; i < 4; ++i) {
+    cout << indent;
+    for (int j = 0; j < 4; ++j) {
+      c = g[i][j];
+      cout << (c ? c : '.');
+    }
+    cout << endl;
+  }
+  cout << endl;
+#endif
+}
 
 Long gHash(const Grid &g) {
   Long ans = 0;
@@ -43,82 +93,53 @@ Grid nextGrid(Grid g, int i, int j, int i2, int j2) {
   return g;
 }
 
-void print(Grid g, int lvl = 0) {
-#ifdef N1AMR
-  char c;
-  string indent(lvl * 5, ' ');
-  for (int i = 0; i < 4; ++i) {
-    cout << indent;
-    for (int j = 0; j < 4; ++j) {
-      c = g[i][j];
-      cout << (c ? c : '.');
-    }
-    cout << endl;
-  }
-  cout << endl;
-#endif
-}
-
 bool solve(Grid g, int turn, int lvl, int m) {
 //  if (history.count(gHash(g)) != 0)
 //    return true;
 //  else
 //    history.insert(gHash(g));
 
-  print(g, lvl);
-
   if (lvl == m)
     return false;
 
-  bool ans = 1;
   queue<pair<pair<int, int>, pair<int, int>>> possible;
 
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
-      char piece = g[i][j];
-      if (turn == 0 && islower(piece) || turn == 1 && isupper(piece) || piece == EMPTY)
+      if (IS_ENEMY(turn, i, j) || IS_EMPTY(i, j))
         continue;
+
+      char piece = GET(i, j);
 
       char type = (char) tolower(piece);
       auto mvs = moves[type];
       for (auto direction = mvs.begin(); direction != mvs.end(); direction++) {
         int i2 = i, j2 = j;
 
-        if (type != 'n') {
-          while (true) {
+        while (true) {
+          if (type != 'n')
             i2 += direction->first, j2 += direction->second;
-            if (!BLOCKED(piece, i2, j2)) {
-              if (ATTACKABLE(piece, i2, j2)) {
-                if (WHITE_WINS(turn, i2, j2)) {
-                  print(nextGrid(g, i, j, i2, j2), lvl + 1);
-                  return true;
-                } else if (WHITE_LOSES(turn, i2, j2)) {
-                  print(nextGrid(g, i, j, i2, j2), lvl + 1);
-                  return false;
-                }
-                possible.push({{i,  j},
-                               {i2, j2}});
-                break;
-              }
-              possible.push({{i,  j},
-                             {i2, j2}});
-            } else {
-              break;
-            }
-          }
-        } else {
-          i2 = i + direction->first, j2 = j + direction->second;
-          if (!BLOCKED(piece, i2, j2)) {
-            if (WHITE_WINS(turn, i2, j2)) {
-              print(nextGrid(g, i, j, i2, j2), lvl + 1);
-              return true;
-            } else if (WHITE_LOSES(turn, i2, j2)) {
-              print(nextGrid(g, i, j, i2, j2), lvl + 1);
-              return false;
-            }
+          else
+            i2 = i + direction->first, j2 = j + direction->second;
+
+          if (IS_EMPTY(i2, j2)) {
             possible.push({{i,  j},
                            {i2, j2}});
+          } else if (IS_ENEMY(turn, i2, j2)) {
+            if (WHITE_WINS(turn, i2, j2))
+              return true;
+            else if (WHITE_LOSES(turn, i2, j2))
+              return false;
+
+            possible.push({{i,  j},
+                           {i2, j2}});
+            break;
+          } else {
+            break;
           }
+
+          if (type == 'n')
+            break;
         }
       }
     }
@@ -133,46 +154,15 @@ bool solve(Grid g, int turn, int lvl, int m) {
         i2 = p.second.first,
         j2 = p.second.second;
 
-    if (turn == 0) {
-      if (solve(nextGrid(g, i, j, i2, j2), !turn, lvl + 1, m)) {
-        print(nextGrid(g, i, j, i2, j2), lvl);
-        return true;
-      }
-    } else if (turn == 1) {
-      if (!solve(nextGrid(g, i, j, i2, j2), !turn, lvl + 1, m)) {
-        print(nextGrid(g, i, j, i2, j2), lvl);
-        return false;
-      }
-    }
+    Grid newGrid = nextGrid(g, i, j, i2, j2);
+    bool result = solve(newGrid, !turn, lvl + 1, m);
+    if (turn == WHITE_TURN && result == true)
+      return true;
+    else if (turn == BLACK_TURN && result == false)
+      return false;
   }
 
   return false;
-}
-
-void init() {
-  moves['q'].push_back({1, 0});
-  moves['q'].push_back({-1, 0});
-  moves['q'].push_back({0, 1});
-  moves['q'].push_back({0, -1});
-  moves['q'].push_back({1, 1});
-  moves['q'].push_back({1, -1});
-  moves['q'].push_back({-1, 1});
-  moves['q'].push_back({-1, -1});
-
-  moves['r'].push_back({1, 0});
-  moves['r'].push_back({-1, 0});
-  moves['r'].push_back({0, 1});
-  moves['r'].push_back({0, -1});
-
-  moves['b'].push_back({1, 1});
-  moves['b'].push_back({1, -1});
-  moves['b'].push_back({-1, 1});
-  moves['b'].push_back({-1, -1});
-
-  for (int i = -2; i <= 2; ++i)
-    for (int j = -2; j <= 2; ++j)
-      if (i != 0 && j != 0 && i != j && i != -j)
-        moves['n'].push_back({i, j});
 }
 
 int main() {
@@ -208,7 +198,6 @@ int main() {
       board[4 - c][r - 'A'] = t + (i >= w) * ('a' - 'A');
     }
 #endif
-    print(board, 0);
-    printf("%s\n", (solve(board, 0, 0, m) ? "YES" : "NO"));
+    printf("%s\n", (solve(board, WHITE_TURN, 0, m) ? "YES" : "NO"));
   }
 }
